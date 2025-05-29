@@ -40,6 +40,7 @@ router.get('/admin/server-status', async (req, res) => {
 
 // --- 1. USER: Unified bot info for a user ---
 router.get('/user/bot-info', async (req, res) => {
+  console.log('🔍 [user] Fetching bot info for user...');
   const { authId } = req.query;
   if (!authId) return res.status(400).json({ message: 'Missing authId' });
 
@@ -54,7 +55,9 @@ router.get('/user/bot-info', async (req, res) => {
     const results = await Promise.all(
       healthyServers.map(async server => {
         try {
-          const { data } = await axios.get(`${server.url}/api/admin/bots`);
+          console.log(`Fetching bots from server: ${server.id}`);
+          const { data } = await axios.get(`${server.url}/api/user/bot-info`, { params: { authId } });
+          console.log(`✅ Fetched ${data.bots.length} bots from server ${server.id}`);
           return data.bots || [];
         } catch {
           return [];
@@ -104,36 +107,37 @@ router.get('/admin/users', async (req, res) => {
 
 // --- 2. ADMIN: All bots from all servers, with server info ---
 router.get('/admin/bots-status', async (req, res) => {
-  try {
-    const status = await getServerStatus();
-    const botServers = JSON.parse(
-      fs.readFileSync(new URL('../config/botServers.json', import.meta.url), 'utf-8')
-    );
-    const healthyServers = getHealthyBotServers(status, botServers);
+  console.log('🔍 [admin] Fetching all bots from all servers...');
+    try {
+        const status = await getServerStatus();
+        const botServers = JSON.parse(
+            fs.readFileSync(new URL('../config/botServers.json', import.meta.url), 'utf-8')
+        );
+        const healthyServers = getHealthyBotServers(status, botServers);
 
-    // Fetch bots from all healthy servers
-    const results = await Promise.all(
-      healthyServers.map(async server => {
-        try {
-          const { data } = await axios.get(`${server.url}/api/admin/bots`);
-          // Attach server id to each bot
-          return (data.bots || []).map(bot => ({
-            ...bot,
-            server: server.id,
-            memoryUsage: bot.memoryUsage || 'N/A',
-            cpuUsage: bot.cpuUsage || 'N/A',
-          }));
-        } catch {
-          return [];
-        }
-      })
-    );
+        // Fetch all-bots from all healthy servers
+        const results = await Promise.all(
+            healthyServers.map(async server => {
+                try {
+                    const { data } = await axios.get(`${server.url}/api/admin/all-bots`);
+                    console.log(`✅ Fetched ${data.bots.length} bots from server ${server.id}`);
+                    // Attach server id to each bot
+                    return (data.bots || []).map(bot => ({
+                        ...bot,
+                        server: server.id
+                    }));
+                } catch {
+                    return [];
+                }
+            })
+        );
 
-    const allBots = results.flat();
-    res.json({ bots: allBots });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+        const allBots = results.flat();
+        res.json({ bots: allBots });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+        console.error('❌ Error fetching bots:', error.message);
+    }
 });
 
 // --- 3. ADMIN: All users, merged with live status and metrics ---
@@ -278,7 +282,11 @@ console.log('Session endpoints set up');
 
 router.all('/user/:action/:phoneNumber?', handleUserAction);
 // Add after your other admin endpoints in api.js
-router.all('/admin/:action/:phoneNumber?', handleAdminAction);
+router.all('/admin/:action/:phoneNumber?', (req, res, next) => {
+  // If the action is 'bots-status', skip to next route (should never happen, but for safety)
+  if (req.params.action === 'bots-status') return next();
+  return handleAdminAction(req, res);
+});
 console.log('User endpoints set up.');
 
 export default router;

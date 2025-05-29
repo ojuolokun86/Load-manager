@@ -1,5 +1,10 @@
+
 [
+  { "id": "railway", "url": "https://bmm2-production.up.railway.app" },
+  { "id": "render", "url": "https://bmm-tech.onrender.com" },
+  { "id": "flyio", "url": "https://techitoon-server-3.fly.dev" }
+ 
   
-  { "id": "test", "url": "http://localhost:3000" }
+  
 
 ]

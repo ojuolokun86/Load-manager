@@ -8,6 +8,7 @@ import fs from "fs";
 import supabase from './services/supabaseClient.js';
 import { forwardQrToClient, fetchUserBotInfo } from './utils.js';
 
+
 const allowedOrigins = [
   "http://localhost:8080",
   "http://localhost:3000",
@@ -54,9 +55,10 @@ async function getBackendUrl(data) {
 
   return botServers[0].url;
 }
-
+import apiRouter from './routes/api.js';
+console.log(`[LM] Bot servers loaded: ${apiRouter} servers`);
 app.use(express.json());
-app.use('/api', apiRoutes);
+app.use('/api', apiRouter);
 
 app.get('/ping', (req, res) => {
   res.status(200).send('pong');
