@@ -87,6 +87,32 @@ router.get('/user/bot-info', async (req, res) => {
   }
 });
 
+router.delete('/admin/users', async (req, res) => {
+  try {
+    const status = await getServerStatus();
+    const botServers = JSON.parse(
+      fs.readFileSync(new URL('../config/botServers.json', import.meta.url), 'utf-8')
+    );
+    const healthyServers = botServers.filter(server => status[server.id]?.healthy);
+
+    // Send DELETE to all healthy servers
+    const results = await Promise.all(
+      healthyServers.map(async server => {
+        try {
+          const { data } = await axios.delete(`${server.url}/api/admin/users`);
+          return { server: server.id, ...data };
+        } catch (err) {
+          return { server: server.id, error: err.message };
+        }
+      })
+    );
+
+    res.json({ success: true, results });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Switch a user's server
 router.post('/admin/switch-server', async (req, res) => {
   const { phoneNumber, newServerId } = req.body;
