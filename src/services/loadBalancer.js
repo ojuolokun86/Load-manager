@@ -5,8 +5,11 @@ const botServers = JSON.parse(fs.readFileSync(new URL('../config/botServers.json
 // Assigns user to the healthiest/least-loaded server
 export async function assignServerForUser() {
   const status = await getServerStatus();
-  // Filter only healthy servers
-  const healthyServers = botServers.filter(s => status[s.id]?.healthy);
+  // Filter only healthy servers and not overloaded
+  const healthyServers = botServers.filter(s => {
+    const serverStatus = status[s.id];
+    return serverStatus?.healthy && (serverStatus.load || 0) < (s.maxLoad || 1);
+  });
   if (!healthyServers.length) return null;
   // Pick the one with the lowest load
   healthyServers.sort((a, b) => (status[a.id].load || 0) - (status[b.id].load || 0));

@@ -98,7 +98,9 @@ router.delete('/admin/users', async (req, res) => {
     // Send DELETE to all healthy servers
     const results = await Promise.all(
       healthyServers.map(async server => {
+        
         try {
+          console.log(`Deleting users on server: ${server.id}`);
           const { data } = await axios.delete(`${server.url}/api/admin/users`);
           return { server: server.id, ...data };
         } catch (err) {
