@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
-import apiRoutes from './routes/api.js';
 import { Server as SocketIOServer } from "socket.io";
 import { io as backendIO } from "socket.io-client";
 import fs from "fs";
