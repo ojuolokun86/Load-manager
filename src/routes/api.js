@@ -40,8 +40,8 @@ router.get('/admin/server-status', async (req, res) => {
 
 // --- 1. USER: Unified bot info for a user ---
 router.get('/user/bot-info', async (req, res) => {
-  console.log('🔍 [user] Fetching bot info for user...');
   const { authId } = req.query;
+   console.log(`🔍 [user] Fetching bot info for user...${authId}`);
   if (!authId) return res.status(400).json({ message: 'Missing authId' });
 
   try {
@@ -67,19 +67,18 @@ router.get('/user/bot-info', async (req, res) => {
 
     // Flatten, filter for this user, and add metrics if available
     const allBots = results.flat()
-      .filter(bot => bot.authId === authId)
-      .map(bot => ({
-        phoneNumber: bot.phoneNumber,
-        status: bot.status || 'Inactive',
-        ram: bot.ram || 'N/A',
-        rom: bot.rom || 'N/A',
-        uptime: bot.uptime || 'N/A',
-        lastActive: bot.lastActive || 'N/A',
-        version: bot.version || 'N/A',
-        memoryUsage: bot.memoryUsage || 'N/A',
-        cpuUsage: bot.cpuUsage || 'N/A',
-        // Do NOT include server for user
-      }));
+  .filter(bot => String(bot.authId) === String(authId))
+  .map(bot => ({
+    phoneNumber: bot.phoneNumber,
+    status: bot.status || 'Inactive',
+    ram: bot.ram || 'N/A',
+    rom: bot.rom || 'N/A',
+    uptime: bot.uptime || 'N/A',
+    lastActive: bot.lastActive || 'N/A',
+    version: bot.version || 'N/A',
+    memoryUsage: bot.memoryUsage || 'N/A',
+    cpuUsage: bot.cpuUsage || 'N/A',
+  }));
 
     res.json({ bots: allBots });
   } catch (error) {
@@ -299,6 +298,83 @@ router.delete('/admin/complaints/:timestamp', async (req, res) => {
   res.json({ success: true });
 });
 
+// Proxy activity log
+router.get('/user/activity-log', async (req, res) => {
+  console.log('🔍 [user] Fetching activity log for user...');
+  const { authId } = req.query;
+  if (!authId) return res.status(400).json({ message: 'Missing authId' });
+
+  try {
+    const status = await getServerStatus();
+    const botServers = JSON.parse(
+      fs.readFileSync(new URL('../config/botServers.json', import.meta.url), 'utf-8')
+    );
+    const healthyServers = botServers.filter(server => status[server.id]?.healthy);
+    if (!healthyServers.length) return res.status(503).json({ message: 'No healthy bot servers' });
+
+    // Fetch activity logs from all healthy servers
+    const results = await Promise.all(
+      healthyServers.map(async server => {
+        try {
+          const { data } = await axios.get(`${server.url}/api/user/activity-log`, { params: { authId } });
+          console.log(`✅ Fetched activity log from server: ${server.id}`);
+          return data.activities || [];
+        } catch (err) {
+          return [];
+        }
+      })
+    );
+
+    // Merge all activity logs and sort by timestamp (descending)
+    const allActivities = results.flat().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    res.json({ activities: allActivities });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Proxy analytics
+router.get('/user/analytics', async (req, res) => {
+  const { authId } = req.query;
+  if (!authId) return res.status(400).json({ message: 'Missing authId' });
+
+  try {
+    const status = await getServerStatus();
+    const botServers = JSON.parse(
+      fs.readFileSync(new URL('../config/botServers.json', import.meta.url), 'utf-8')
+    );
+    const healthyServers = botServers.filter(server => status[server.id]?.healthy);
+    if (!healthyServers.length) return res.status(503).json({ message: 'No healthy bot servers' });
+
+    // Fetch analytics from all healthy servers
+    const results = await Promise.all(
+      healthyServers.map(async server => {
+        try {
+          const { data } = await axios.get(`${server.url}/api/user/analytics`, { params: { authId } });
+          // Assume data is { labels: [], commandProcessingTime: [] }
+          return data;
+        } catch (err) {
+          return null;
+        }
+      })
+    );
+
+    // Merge analytics: concatenate labels and commandProcessingTime arrays
+    const merged = results.filter(Boolean).reduce((acc, curr) => {
+      if (curr.labels && curr.commandProcessingTime) {
+        acc.labels.push(...curr.labels);
+        acc.commandProcessingTime.push(...curr.commandProcessingTime);
+      }
+      return acc;
+    }, { labels: [], commandProcessingTime: [] });
+
+    res.json(merged);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.post('/auth/register', handleRegister);
 console.log('Register endpoint set up');
 router.all('/auth/:action/:phoneNumber?', handleAuthAction);
@@ -311,7 +387,6 @@ console.log('Session endpoints set up');
 router.all('/user/:action/:phoneNumber?', handleUserAction);
 // Add after your other admin endpoints in api.js
 router.all('/admin/:action/:phoneNumber?', (req, res, next) => {
-  // If the action is 'bots-status', skip to next route (should never happen, but for safety)
   if (req.params.action === 'bots-status') return next();
   return handleAdminAction(req, res);
 });

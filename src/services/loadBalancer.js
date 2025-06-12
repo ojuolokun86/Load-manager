@@ -9,7 +9,7 @@ export async function assignServerForUser() {
   // Always try VPS first, up to 50 bots
   const vps = botServers.find(s => s.id === 'VPS');
   const vpsStatus = status['VPS'];
-  if (vps && vpsStatus?.healthy && (vpsStatus.load || 0) < 7) {
+  if (vps && vpsStatus?.healthy && (vpsStatus.load || 0) < 10) {
     console.log(`[LOAD BALANCER] Assigned server: VPS`);
     return 'VPS';
   }

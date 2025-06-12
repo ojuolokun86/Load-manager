@@ -115,7 +115,7 @@ io.on('connection', (client) => {
       });
 
       backendSocket.onAny((backendEvent, ...backendArgs) => {
-        console.log(`[DEBUG] backendSocket event: ${backendEvent}`, backendArgs[0]);
+        //console.log(`[DEBUG] backendSocket event: ${backendEvent}`, backendArgs[0]);
         if (backendEvent === 'qr') {
           forwardQrToClient(backendArgs[0]);
         } else {
