@@ -163,7 +163,6 @@ router.get('/admin/bots-status', async (req, res) => {
         res.json({ bots: allBots });
     } catch (error) {
         res.status(500).json({ message: error.message });
-        console.error('❌ Error fetching bots:', error.message);
     }
 });
 
@@ -241,7 +240,6 @@ router.get('/admin/users-info', async (req, res) => {
 
     res.status(200).json({ users: usersWithSubscription });
   } catch (err) {
-    console.error('❌ Unexpected error fetching users:', err.message);
     res.status(500).json({ message: 'Unexpected error occurred.' });
   }
 });
