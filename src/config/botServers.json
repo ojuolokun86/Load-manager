@@ -1,5 +1,6 @@
 [
   { "id": "VPS", "url": "http://18.188.26.233:3000", "maxLoad": 7 },
+  { "id": "railway", "url": "https://bmm2-production.up.railway.app", "maxLoad": 5 },
   { "id": "flyio", "url": "https://techitoon-server-3.fly.dev", "maxLoad": 5 },
   { "id": "ORACLE", "url": "http://141.147.24.166:3000", "maxLoad": 7 }
 ]
