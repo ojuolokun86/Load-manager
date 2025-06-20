@@ -97,7 +97,6 @@ export async function handleSessionAction(req, res) {
     const response = await axios.post(`${serverUrl}/api/${action}`, req.body);
     res.status(response.status).json(response.data);
   } catch (err) {
-  console.error(`[LM] Error in handleSessionAction:`, err);
   // Forward real error from bot server if available
   if (err.response && err.response.data) {
     return res.status(err.response.status).json(err.response.data);
