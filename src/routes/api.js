@@ -35,8 +35,26 @@ router.get('/admin/server-status', async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
-
-// User endpoints
+router.get('/admin/servers', async (req, res) => {
+  console.log('🤖 [admin] Fetching all bot servers...');
+  try {
+    const status = await getServerStatus();
+    const botServers = JSON.parse(
+      fs.readFileSync(new URL('../config/botServers.json', import.meta.url), 'utf-8')
+    );
+    const healthyServers = getHealthyBotServers(status, botServers);
+    // Make sure to return both id and name
+    res.json({
+      servers: healthyServers.map(s => ({
+        id: s.id,
+        name: s.name || s.id   // fallback to id if name is missing
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ servers: [], message: error.message });
+    console.error('☠️Error in /api/admin/servers:', error);
+  }
+});
 
 // --- 1. USER: Unified bot info for a user ---
 router.get('/user/bot-info', async (req, res) => {
