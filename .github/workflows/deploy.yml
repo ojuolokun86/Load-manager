@@ -1,0 +1,28 @@
+name: Deploy to Oracle VM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up SSH key
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.ORACLE_SSH_KEY }}
+
+    - name: Deploy via SSH
+      run: |
+        ssh -o StrictHostKeyChecking=no ubuntu@89.168.114.68 << 'EOF'
+          cd ~/Load-manager
+          git pull origin main
+          npm install
+          pm2 restart load-manager || pm2 start npm --name load-manager -- start
+        EOF
